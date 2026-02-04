@@ -1,0 +1,21 @@
+# Canary benchmarks for EXO
+#
+# These run automatically on new commits to track performance over time.
+
+[[benchmark]]
+name = "llama-70b-single"
+description = "LLaMA 3.1 70B 4-bit inference on single M3 Ultra"
+constraints = [
+    "Hosts(=1)",
+    "All(Chip(m3_ultra))",
+    "All(GpuCores(=60))",
+    "All(Memory(>=64GiB))",
+]
+
+[benchmark.topology]
+type = "none"
+
+[benchmark.args]
+model = "mlx-community/Meta-Llama-3.1-70B-Instruct-4bit"
+prompt = "Explain the concept of distributed inference in three sentences."
+max_tokens = 128
