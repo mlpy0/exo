@@ -20,6 +20,7 @@ class FakeRunnerSupervisor:
     bound_instance: BoundInstance
     status: RunnerStatus
     completed: set[TaskId] = field(default_factory=set)
+    is_stuck_after_cancel: bool = False
 
 
 class OtherTask(BaseTask):

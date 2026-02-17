@@ -52,6 +52,15 @@ class RunnerSupervisor:
     pending: dict[TaskId, anyio.Event] = field(default_factory=dict, init=False)
     completed: set[TaskId] = field(default_factory=set, init=False)
     cancelled: set[TaskId] = field(default_factory=set, init=False)
+    cancel_sent_at: float | None = field(default=None, init=False)
+
+    @property
+    def is_stuck_after_cancel(self) -> bool:
+        return (
+            isinstance(self.status, RunnerRunning)
+            and self.cancel_sent_at is not None
+            and (anyio.current_time() - self.cancel_sent_at) > 30
+        )
 
     @classmethod
     def create(
@@ -144,6 +153,7 @@ class RunnerSupervisor:
             logger.info(f"Unable to cancel {task_id} as it has been completed")
             return
         self.cancelled.add(task_id)
+        self.cancel_sent_at = anyio.current_time()
         with anyio.move_on_after(0.5) as scope:
             await self._cancel_sender.send_async(task_id)
         if scope.cancel_called:
@@ -156,6 +166,8 @@ class RunnerSupervisor:
                 async for event in events:
                     if isinstance(event, RunnerStatusUpdated):
                         self.status = event.runner_status
+                        if not isinstance(event.runner_status, RunnerRunning):
+                            self.cancel_sent_at = None
                     if isinstance(event, TaskAcknowledged):
                         self.pending.pop(event.task_id).set()
                         continue

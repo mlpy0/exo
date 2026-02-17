@@ -54,7 +54,8 @@ def plan(
 ) -> Task | None:
     # Python short circuiting OR logic should evaluate these sequentially.
     return (
-        _cancel_tasks(runners, tasks)
+        _recover_stuck_runner(runners)
+        or _cancel_tasks(runners, tasks)
         or _kill_runner(runners, all_runners, instances)
         or _create_runner(node_id, runners, instances)
         or _model_needs_download(node_id, runners, global_download_status)
@@ -63,6 +64,18 @@ def plan(
         or _ready_to_warmup(runners, all_runners)
         or _pending_tasks(runners, tasks, all_runners, input_chunk_buffer or {})
     )
+
+
+def _recover_stuck_runner(
+    runners: Mapping[RunnerId, RunnerSupervisor],
+) -> Shutdown | None:
+    for runner in runners.values():
+        if runner.is_stuck_after_cancel:
+            return Shutdown(
+                instance_id=runner.bound_instance.instance.instance_id,
+                runner_id=runner.bound_instance.bound_runner_id,
+            )
+    return None
 
 
 def _kill_runner(
