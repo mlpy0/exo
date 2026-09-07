@@ -71,7 +71,7 @@ def _patched_step(self: GenerationBatch) -> tuple[list[int], list[mx.array]]:
         processed_logits: list[mx.array] = []
         for e in range(len(self.uids)):
             sample_logits = logits[e : e + 1]
-            for processor in self.logits_processors[e]:
+            for processor in self.logits_processors[e] or []:
                 sample_logits = processor(mx.array(self.tokens[e]), sample_logits)
             processed_logits.append(sample_logits)
         logits = mx.concatenate(processed_logits, axis=0)
